@@ -52,7 +52,7 @@ async function createTableProxy() {
     $('[name="import_proxy"]').val(
         list.flatMap(p => [
             ...(p.commentBefore ? [`# ${p.commentBefore}`] : []),
-            `${p.user && p.pass ? `${p.user}:${p.pass}@` : ''}${p.ip}:${p.port}` + (p.commentAfter ? ` # ${p.commentAfter}` : '')
+            `${p.scheme && p.scheme !== 'http' ? p.scheme + '://' : ''}${p.user && p.pass ? `${p.user}:${p.pass}@` : ''}${p.ip}:${p.port}` + (p.commentAfter ? ` # ${p.commentAfter}` : '')
         ]).join('\n')
     );
 
@@ -64,19 +64,24 @@ async function createTableProxy() {
     }
 
     list.forEach(p => {
-        const isCurrent = current && current.ip === p.ip && current.port === p.port && current.user === p.user && current.pass === p.pass;
+        const pScheme = p.scheme || 'http';
+        const currentScheme = current?.scheme || 'http';
+        
+        const isCurrent = current && current.ip === p.ip && current.port === p.port && current.user === p.user && current.pass === p.pass && currentScheme === pScheme;
+        
         const emoji = isCurrent ? '✅' : '⚪';
         const after = p.commentAfter ?? '';
 
         if (p.commentBefore) {
-            tbody.append(`<tr><td></td><td colspan="5" class="p-0 px-1">${p.commentBefore}</td></tr>`);
+            tbody.append(`<tr><td></td><td colspan="6" class="p-0 px-1">${p.commentBefore}</td></tr>`);
         }
 
         tbody.append(`
-        <tr>
+        <tr data-scheme="${pScheme}">
             <td class="py-0 px-1 align-middle${isCurrent ? '' : ' text-secondary'}">
                 <a href="#" class="text-decoration-none proxy_${isCurrent ? 'current' : 'select'}">${emoji}</a>
             </td>
+            <td class="p-0"><input class="font-monospace form-control form-control-sm text-center" value="${pScheme.toUpperCase()}" readonly></td>
             <td class="p-0"><input class="font-monospace form-control form-control-sm i_ip"   value="${p.ip}" readonly></td>
             <td class="p-0"><input class="font-monospace form-control form-control-sm i_port" value="${p.port}" readonly></td>
             <td class="p-0"><input class="font-monospace form-control form-control-sm i_user" value="${p.user}" readonly></td>
@@ -117,6 +122,7 @@ $(async function () {
             await chrome.runtime.sendMessage({
                 action: 'set_proxy',
                 data: {
+                    scheme: $tr.attr('data-scheme') || 'http',
                     ip: $tr.find('.i_ip').val().trim(),
                     port: $tr.find('.i_port').val().trim(),
                     user: $tr.find('.i_user').val().trim(),

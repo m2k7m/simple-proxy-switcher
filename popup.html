@@ -37,6 +37,7 @@
                     <thead>
                     <tr>
                         <th style="width: 1px"></th>
+                        <th style="width: 60px">TYPE</th>
                         <th style="min-width: 110px">IP</th>
                         <th style="min-width: 60px">PORT</th>
                         <th>LOGIN</th>
@@ -46,7 +47,7 @@
                     </thead>
                     <tbody>
                     <tr>
-                        <td colspan="6" class="text-center">Empty</td>
+                        <td colspan="7" class="text-center">Empty</td>
                     </tr>
                     </tbody>
                 </table>
@@ -68,9 +69,13 @@
                                 </h2>
                                 <div id="collapseImportHelp" class="accordion-collapse collapse" data-bs-parent="#importHelp">
                                     <div class="accordion-body p-2">
-                                <textarea class="form-control shadow-none" rows="5" style="resize: none;" readonly>ip:port
+                                <textarea class="form-control shadow-none" rows="7" style="resize: none;" readonly>ip:port
 ip:port:login:password
 login:password@ip:port
+http://ip:port
+https://ip:port
+socks5://ip:port
+socks4://login:password@ip:port
 # comment 1
 login:password@ip:port # comment 2</textarea>
                                     </div>

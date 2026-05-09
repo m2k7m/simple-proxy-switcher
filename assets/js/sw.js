@@ -68,8 +68,16 @@ function parseProxyList(raw) {
         }
 
         const idx = line.indexOf('#');
-        const text = idx === -1 ? line : line.slice(0, idx).trim();
+        let text = idx === -1 ? line : line.slice(0, idx).trim();
         const inlineComment = idx === -1 ? '' : line.slice(idx + 1).trim().replace(/[&"'<>]/g, c => (escape)[c]);
+
+        // protocol parsing
+        let scheme = 'http'; 
+        if (text.includes('://')) {
+            const parts = text.split('://');
+            scheme = parts[0].toLowerCase();
+            text = parts[1];
+        }
 
         let ip, port, user = '', pass = '';
         if (text.includes('@')) {
@@ -85,7 +93,7 @@ function parseProxyList(raw) {
             return out;
         }
 
-        out.push({ip, port, user, pass, commentBefore: pendingComment, commentAfter: inlineComment});
+        out.push({scheme, ip, port, user, pass, commentBefore: pendingComment, commentAfter: inlineComment});
 
         pendingComment = '';
         return out;
@@ -104,7 +112,7 @@ function updateIcon() {
 }
 
 
-async function applyProxy({ip, port, user = '', pass = ''}, withSideFx = true) {
+async function applyProxy({scheme = 'http', ip, port, user = '', pass = ''}, withSideFx = true) {
     const {exclude_urls = ''} = await chrome.storage.local.get('exclude_urls');
     const patterns = exclude_urls.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
 
@@ -113,6 +121,10 @@ async function applyProxy({ip, port, user = '', pass = ''}, withSideFx = true) {
 
     const needsPac = patterns.some(p => p.includes('/'));
     if (needsPac) {
+        let pacScheme = 'PROXY';
+        if (scheme === 'socks5') pacScheme = 'SOCKS5';
+        else if (scheme === 'socks4') pacScheme = 'SOCKS';
+
         const jsonPatterns = JSON.stringify(patterns);
         const pacData = `function FindProxyForURL(url, host) {
   const pats = ${jsonPatterns};
@@ -121,14 +133,14 @@ async function applyProxy({ip, port, user = '', pass = ''}, withSideFx = true) {
       return 'DIRECT';
     }
   }
-  return 'PROXY ${proxyHost}:${proxyPort}';
+  return '${pacScheme} ${proxyHost}:${proxyPort}';
 }`;
         config = {mode: 'pac_script', pacScript: {data: pacData}};
     } else {
         config = {
             mode: 'fixed_servers',
             rules: {
-                singleProxy: {host: proxyHost, port: proxyPort},
+                singleProxy: {scheme: scheme, host: proxyHost, port: proxyPort},
                 bypassList: patterns,
             },
         };
@@ -138,7 +150,7 @@ async function applyProxy({ip, port, user = '', pass = ''}, withSideFx = true) {
 
     proxyEnabled = true;
     proxyAuth = user && pass ? {user, pass} : null;
-    await chrome.storage.local.set({proxy_current: JSON.stringify({ip, port, user, pass})});
+    await chrome.storage.local.set({proxy_current: JSON.stringify({scheme, ip, port, user, pass})});
     updateIcon();
 
     if (withSideFx) runSideEffects();
